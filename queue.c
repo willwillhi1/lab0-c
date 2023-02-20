@@ -330,94 +330,49 @@ int q_descend(struct list_head *head)
     }
     return q_size(head);
 }
-/*
-#define MAX_DEPTH 512
-void q_sort(struct list_head *head)
+
+int merge_two_list(struct list_head *first, struct list_head *second)
 {
-    if (list_empty(head) || list_is_singular(head))
-        return;
-
-    struct list_head stack[MAX_DEPTH];
-    for (int i = 0; i < MAX_DEPTH; i++)
-        INIT_LIST_HEAD(&stack[i]);
-    int top = -1;
-    list_splice_init(head, &stack[++top]);
-
-    //struct list_head partition;
-    //INIT_LIST_HEAD(&partition);
-    LIST_HEAD(partition);
-
-    while (top >= 0) {
-        INIT_LIST_HEAD(&partition);
-        list_splice_init(&stack[top--], &partition);
-        if (!list_empty(&partition) && !list_is_singular(&partition)) {
-            struct list_head list_less, list_greater;
-            INIT_LIST_HEAD(&list_less);
-            INIT_LIST_HEAD(&list_greater);
-            element_t *pivot = list_first_entry(&partition, element_t, list);
-            list_del(&pivot->list);
-            INIT_LIST_HEAD(&pivot->list);
-
-            element_t *itm = NULL, *is = NULL;
-            list_for_each_entry_safe (itm, is, &partition, list) {
-                //list_del(&itm->list);
-                if (strcmp(itm->value, pivot->value) < 0)
-                    list_move(&itm->list, &list_less);
-                else
-                    list_move(&itm->list, &list_greater);
-            }
-
-            list_move_tail (&pivot->list, &list_less);
-            if (!list_empty(&list_greater))
-                list_splice_tail(&list_greater, &stack[++top]);
-            if (!list_empty(&list_less))
-                list_splice_tail(&list_less, &stack[++top]);
-        } else {
-            top++;
-            list_splice_tail(&partition, &stack[top]);
-            while (top >= 0 && list_is_singular(&stack[top])) {
-                element_t *tmp = list_first_entry(&stack[top], element_t, list);
-                list_del(&tmp->list);
-                INIT_LIST_HEAD(&stack[top--]);
-                list_add_tail(&tmp->list, head);
-            }
-        }
+    if (!first || !second)
+        return 0;
+    struct list_head temp_head;
+    INIT_LIST_HEAD(&temp_head);
+    while (!list_empty(first) && !list_empty(second)) {
+        element_t *first_front = list_first_entry(first, element_t, list);
+        element_t *second_front = list_first_entry(second, element_t, list);
+        char *first_str = first_front->value, *second_str = second_front->value;
+        element_t *minimum =
+            strcmp(first_str, second_str) < 0 ? first_front : second_front;
+        list_move_tail(&minimum->list, &temp_head);
     }
+    list_splice_tail_init(first, &temp_head);
+    list_splice_tail(second, &temp_head);
+    list_splice(&temp_head, first);
+    return q_size(first);
 }
-
-
-void q_sort(struct list_head *head)
-{
-    if (list_empty(head) || list_is_singular(head))
-        return;
-
-    struct list_head list_less, list_greater;
-    INIT_LIST_HEAD(&list_less);
-    INIT_LIST_HEAD(&list_greater);
-
-    element_t *pivot = list_first_entry(head, element_t, list);
-    list_del(&pivot->list);
-
-    element_t *itm = NULL, *is = NULL;
-    list_for_each_entry_safe (itm, is, head, list) {
-        if (strcmp(itm->value, pivot->value) < 0)
-            list_move (&itm->list, &list_less);
-        else
-            list_move (&itm->list, &list_greater);
-    }
-
-    q_sort(&list_less);
-    q_sort(&list_greater);
-
-    list_add(&pivot->list, head);
-    list_splice(&list_less, head);
-    list_splice_tail(&list_greater, head);
-}
-*/
 
 /* Merge all the queues into one sorted queue, which is in ascending order */
 int q_merge(struct list_head *head)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    else if (list_is_singular(head))
+        return q_size(list_first_entry(head, queue_contex_t, chain)->q);
+    int size = q_size(head);
+    int count = (size % 2) ? size / 2 + 1 : size / 2;
+    int queue_size = 0;
+    for (int i = 0; i < count; ++i) {
+        queue_contex_t *first = list_first_entry(head, queue_contex_t, chain);
+        queue_contex_t *second =
+            list_entry(first->chain.next, queue_contex_t, chain);
+        while (first->q && second->q) {
+            queue_size = merge_two_list(first->q, second->q);
+            second->q = NULL;
+            list_move_tail(&second->chain, head);
+            first = list_entry(first->chain.next, queue_contex_t, chain);
+            second = list_entry(first->chain.next, queue_contex_t, chain);
+        }
+    }
+    return queue_size;
 }
