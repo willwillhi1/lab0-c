@@ -75,22 +75,6 @@ bool q_insert_tail(struct list_head *head, char *s)
 }
 
 /* Remove an element from head of queue */
-/*
-element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
-{
-    if (head == NULL || list_empty(head))
-        return NULL;
-    element_t *node = list_entry(head->next, element_t, list);
-    list_del(head->next);
-    if (sp != NULL) {
-        int len = strlen(node->value)+1;
-        len = (len > (bufsize-1))?bufsize-1:len;
-        strncpy(sp, node->value, len);
-        sp[len] = '\0';
-    }
-    return node;
-}
-*/
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
     if (!head || list_empty(head)) {
@@ -274,17 +258,21 @@ struct list_head *mergelist(struct list_head *l1, struct list_head *l2)
 
 struct list_head *mergesort(struct list_head *l)
 {
-    if (l == NULL || l->next == NULL)
+    if (!l || !l->next)
         return l;
-    struct list_head *fast = l;
-    struct list_head *slow = l;
-    while (fast->next != NULL && fast->next->next != NULL) {
-        fast = fast->next->next;
-        slow = slow->next;
+
+    struct list_head *first = l;
+    struct list_head *last = l->prev;
+
+    while (first != last && first->next != last) {
+        first = first->next;
+        last = last->prev;
     }
     struct list_head *l1 = l;
-    struct list_head *l2 = slow->next;
-    slow->next = NULL;
+    struct list_head *l2 = first->next;
+    l2->prev = l->prev;
+    l1->prev = first;
+    first->next = NULL;
 
     return mergelist(mergesort(l1), mergesort(l2));
 }
@@ -295,6 +283,7 @@ void q_sort(struct list_head *head)
     if (head == NULL || list_empty(head))
         return;
     head->prev->next = NULL;
+    head->next->prev = head->prev;
     head->next = mergesort(head->next);
 
     struct list_head *cur = head;
@@ -375,4 +364,34 @@ int q_merge(struct list_head *head)
         }
     }
     return queue_size;
+}
+
+static inline void swap(struct list_head *node_1, struct list_head *node_2)
+{
+    if (node_1 == node_2)
+        return;
+    struct list_head *node_1_prev = node_1->prev;
+    struct list_head *node_2_prev = node_2->prev;
+    if (node_1->prev != node_2)
+        list_move(node_2, node_1_prev);
+    list_move(node_1, node_2_prev);
+}
+
+void q_shuffle(struct list_head *head)
+{
+    if (!head || list_is_singular(head))
+        return;
+    struct list_head *last = head;
+    int size = q_size(head);
+    while (size > 0) {
+        int index = rand() % size;
+        struct list_head *new = last->prev;
+        struct list_head *old = new;
+        while (index--)
+            old = old->prev;
+        swap(new, old);
+        last = last->prev;
+        size--;
+    }
+    return;
 }
