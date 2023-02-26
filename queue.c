@@ -335,7 +335,7 @@ int merge_two_list(struct list_head *first, struct list_head *second)
         list_move_tail(&minimum->list, &temp_head);
     }
     list_splice_tail_init(first, &temp_head);
-    list_splice_tail(second, &temp_head);
+    list_splice_tail_init(second, &temp_head);
     list_splice(&temp_head, first);
     return q_size(first);
 }
@@ -355,9 +355,8 @@ int q_merge(struct list_head *head)
         queue_contex_t *first = list_first_entry(head, queue_contex_t, chain);
         queue_contex_t *second =
             list_entry(first->chain.next, queue_contex_t, chain);
-        while (first->q && second->q) {
+        while (!list_empty(first->q) && !list_empty(second->q)) {
             queue_size = merge_two_list(first->q, second->q);
-            second->q = NULL;
             list_move_tail(&second->chain, head);
             first = list_entry(first->chain.next, queue_contex_t, chain);
             second = list_entry(first->chain.next, queue_contex_t, chain);
